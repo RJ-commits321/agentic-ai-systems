@@ -1,0 +1,2036 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "<p style=\"text-align:center\">\n",
+    "    <a href=\"https://skills.network\" target=\"_blank\">\n",
+    "    <img src=\"https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/assets/logos/SN_web_lightmode.png\" width=\"200\" alt=\"Skills Network Logo\"  />\n",
+    "    </a>\n",
+    "</p>\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# **Build LangGraph Design Patterns: Orchestration & Evaluation**\n",
+    "\n",
+    "Estimated time needed: **30** minutes\n",
+    "\n",
+    "In this hands-on lab, you'll master two fundamental agentic design patterns that power modern AI workflows. You'll build a parallel meal planning system that coordinates multiple AI chefs, and an iterative investment advisor that refines recommendations through continuous feedback loops.\n",
+    "\n",
+    "**Real world impact**: These patterns are used in production systems at leading companies such as Anthropic, OpenAI, Microsoft, IBM, and Google—enabling AI agents to collaborate, self-improve, and tackle complex, multi-step reasoning tasks across domains from research to customer service.\n",
+    "\n",
+    "## Why LangGraph?\n",
+    "\n",
+    "As AI systems take on more complex problems, a critical challenge arises:  \n",
+    "**How can we coordinate multiple agents or components to work collaboratively, intelligently, and adaptively?**\n",
+    "\n",
+    "This is where **LangGraph** comes in.\n",
+    "\n",
+    "**LangGraph** is a framework for building **stateful, dynamic, and modular AI workflows**.  \n",
+    "\n",
+    "Unlike traditional linear chains, LangGraph enables:\n",
+    "\n",
+    "- 🔄 **Iterative refinement**: Incorporate feedback loops and self-correction logic  \n",
+    "- 🧵 **Conditional routing**: Dynamically choose different paths based on intermediate results  \n",
+    "- ⚡️ **Parallel execution**: Process independent subtasks concurrently to boost efficiency  \n",
+    "- 🧠 **Global state management**: Maintain and evolve shared context across complex workflows\n",
+    "\n",
+    "With LangGraph, your workflows become more than just pipelines; they become **intelligent systems** capable of reasoning, adapting, and improving over time. This is **ideal** for use cases such as multi-agent collaboration, decision-making, evaluation loops, and planning.\n",
+    "\n",
+    "We'll be loosely following [this](https://langchain-ai.github.io/langgraph/tutorials/workflows/#orchestrator-worker) LangGraph tutorial throughout this lab.\n",
+    "\n",
+    "<img src=\"https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/eXR9pjKDiPrPhLcEjhsKCA/langgraph.png\" width=\"100%\" alt=\"langgraph\">\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## __Table of Contents__\n",
+    "\n",
+    "<ol>\n",
+    "    <li><a href=\"#Objectives\">Objectives</a></li>\n",
+    "    <li>\n",
+    "        <a href=\"#Setup\">Setup</a>\n",
+    "        <ol>\n",
+    "            <li><a href=\"#Installing-Required-Libraries\">Installing Required Libraries</a></li>\n",
+    "            <li><a href=\"#Importing-Required-Libraries\">Importing Required Libraries</a></li>\n",
+    "        </ol>\n",
+    "    </li>\n",
+    "    <li>\n",
+    "        <a href=\"#Orchestrator-Worker-Pattern\">Orchestrator-Worker Pattern</a>\n",
+    "        <ol>\n",
+    "            <li><a href=\"#Structured-Output\">Structured Output</a></li>\n",
+    "            <li><a href=\"#State-(Orchestration)\">State (Orchestration)</a></li>\n",
+    "            <li><a href=\"#Orchestrator-Node\">Orchestrator Node</a></li>\n",
+    "            <li><a href=\"#Worker-Nodes\">Worker Nodes</a></li>\n",
+    "            <li><a href=\"#Building-the-Workflow-(Orchestration)\">Building the Workflow (Orchestration)</a></li>\n",
+    "            <li><a href=\"#Visualization\">Visualization</a></li>\n",
+    "            <li><a href=\"#Testing-(Orchestration)\">Testing (Orchestration)</a></li>\n",
+    "        </ol>\n",
+    "    </li>\n",
+    "    <li>\n",
+    "        <a href=\"#Reflection-Pattern\">Reflection Pattern</a>\n",
+    "        <ol>\n",
+    "            <li><a href=\"#State-(Reflection)\">State (Reflection)</a></li>\n",
+    "            <li><a href=\"#Setup-Node\">Setup Node</a></li>\n",
+    "            <li><a href=\"#Generator-Node\">Generator Node</a></li>\n",
+    "            <li><a href=\"#Evaluator-Node\">Evaluator Node</a></li>\n",
+    "            <li><a href=\"#Routing-Node\">Routing Node</a></li>\n",
+    "            <li><a href=\"#Building-the-Workflow-(Reflection)\">Building the Workflow (Reflection)</a></li>\n",
+    "            <li><a href=\"#Testing-(Reflection)\">Testing (Reflection)</a></li>\n",
+    "        </ol>\n",
+    "    </li>\n",
+    "    <li>\n",
+    "        <a href=\"#Conclusion\">Conclusion</a>\n",
+    "        <ol>\n",
+    "            <li><a href=\"#Next-Steps\">Next Steps</a></li>\n",
+    "            <li><a href=\"#Authors\">Authors</a></li>\n",
+    "        </ol>\n",
+    "    </li>\n",
+    "</ol>\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Objectives\n",
+    "\n",
+    "After completing this lab, you will be able to:\n",
+    "\n",
+    "- Design and implement the **Orchestrator-Worker** pattern for parallel task processing.\n",
+    "- Build **reflection loops** that enable agents to iteratively improve their outputs.\n",
+    "- Manage complex state across **multi-node LangGraph workflows**.\n",
+    "- Apply **conditional routing** to create dynamic, intelligent workflows.\n",
+    "- Debug and visualize LangGraph execution flows.\n",
+    "- Recognize when to use each pattern in real-world scenarios.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "----\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Setup\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Installing Required Libraries\n",
+    "\n",
+    "The following required libraries are __not__ pre-installed in the Skills Network Labs environment. __You must run the following cell__ to install them:\n",
+    "\n",
+    "**Note:** The version has been specified here to pin it. It's recommended that you do the same. Even if the library is updated in the future, the installed version will still support this lab work.\n",
+    "\n",
+    "Since `%%capture` is being used to capture the installation process, you won't see the output. However, once the installation is complete, you will see a number beside the cell.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%capture\n",
+    "!pip install langchain-openai==0.3.27\n",
+    "!pip install langgraph==0.6.6\n",
+    "!pip install pygraphviz==1.14"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Importing Required Libraries\n",
+    "\n",
+    "Let's import the required libraries in the following cells starting with our LangGraph modules:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from langgraph.graph import StateGraph, END, START\n",
+    "from langgraph.types import Send"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Imports for type safety and state management:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from typing import TypedDict, Annotated, List, Literal\n",
+    "from pydantic import BaseModel, Field\n",
+    "import operator\n",
+    "from pprint import pprint"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Imports for graph visualization of our workflow:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from IPython.display import Image, display"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Imports for LangChain API and LLM instantiation:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from langchain_openai import ChatOpenAI\n",
+    "from langchain_core.prompts import ChatPromptTemplate\n",
+    "\n",
+    "# Initialize the language model - using gpt-4o-mini for cost-effective experimentation\n",
+    "llm = ChatOpenAI(model=\"gpt-4o-mini\", temperature=0.7)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Orchestrator-Worker Pattern\n",
+    "\n",
+    "The orchestrator-worker pattern is a powerful approach for handling complex, unpredictable tasks by dynamically **breaking them into manageable pieces** and **processing them in parallel**. When you can't predict upfront how many subtasks you'll need or what they'll involve, this pattern shines by intelligently **analyzing** the input, **decomposing** it into structured work units, and **assigning** specialized workers to handle each piece independently. This pattern is widely used in real-world AI workflow systems, including industry solutions such as IBM’s [Watsonx Orchestrate](https://www.ibm.com/products/watsonx-orchestrate?utm_source=skills_network&utm_content=in_lab_content_link&utm_id=Lab-Agentic+Design+Patterns+in+LangGraph-v1_1752612018).\n",
+    "\n",
+    "Think of it like a busy catering kitchen that takes orders for large events—when a customer orders \"I want a three-course meal, hamburgers for lunch, and pizza for dinner,\" the head chef (orchestrator) analyzes the request and breaks it down into specific dishes, then assigns specialized culinary consultants to create detailed meal plans for each cuisine. Each consultant specializes in a specific cuisine, for example, one expert in Italian cuisine handles the pizza planning, while an American cuisine specialist develops the hamburger menu. The key is that each consultant receives a **clear, structured brief** with dish requirements and dietary considerations, not just \"plan something good.\" In our meal planning system, user requests such as \"feed my family for the week\" could result in anywhere from 3 to 15 different dishes, each requiring a specialist consultant's expertise in their particular cuisine to create comprehensive meal plans.\n",
+    "\n",
+    "Here's a simple visualization of the workflow (made on [Excalidraw](https://excalidraw.com/)):\n",
+    "\n",
+    "<img src=\"https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/XKXeMzLe9KNW5UjYiJpuSQ/orchestration.png\" width=\"100%\" alt=\"orchestration\">\n",
+    "\n",
+    "## Structured Output\n",
+    "\n",
+    "The orchestrator **must** produce **structured outputs** because our worker nodes require specific, well-defined input and output formats to process information reliably. Each worker (chef consultant) specializes in gathering specific information about their assigned cuisine:\n",
+    "\n",
+    "- Name of the dish (for example, \"Margherita Pizza\", \"Classic Cheeseburger\")\n",
+    "- List of ingredients (the most important part for meal planning)\n",
+    "- The cuisine or cultural origin of the dish (for example, Italian, American, Mexican)\n",
+    "\n",
+    "For each worker, we aggregate this data into a structured format called a `Dish`. We can then store a list of dishes with the `Dishes` class.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Dish schema for a single dish\n",
+    "class Dish(BaseModel):\n",
+    "    name: str = Field(\n",
+    "        description=\"Name of the dish (for example, Spaghetti Bolognese, Chicken Curry).\"\n",
+    "    )\n",
+    "    ingredients: List[str] = Field(\n",
+    "        description=\"List of ingredients needed for this dish, separated by commas.\"\n",
+    "    )\n",
+    "    location: str = Field(\n",
+    "        description=\"The cuisine or cultural origin of the dish (for example, Italian, Indian, Mexican).\"\n",
+    "    )\n",
+    "\n",
+    "# Dishes schema for a list of Dish objects\n",
+    "class Dishes(BaseModel):\n",
+    "    sections: List[Dish] = Field(\n",
+    "        description=\"A list of grocery sections, one for each dish, with ingredients.\"\n",
+    "    )"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The following prompt then transforms the user's meal request into structured recipe cards that individual cuisine specialist workers can reliably process, matching our catering kitchen orchestrator story where the head chef breaks down complex orders into clear, actionable tasks for specialized line cooks. \n",
+    "\n",
+    "**Note**: You can optionally include the schema field names (name, ingredients, location) in the prompt for extra clarity, but it's not necessary when using structured output.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# construct a prompt template\n",
+    "dish_prompt = ChatPromptTemplate.from_messages([\n",
+    "    (\n",
+    "        \"system\",\n",
+    "        \"You are an assistant that generates a structured grocery list.\\n\\n\"\n",
+    "        \"The user wants to prepare the following meals: {meals}\\n\\n\"\n",
+    "        \"For each meal, return a section with:\\n\"\n",
+    "        \"- the name of the dish\\n\"\n",
+    "        \"- a comma-separated list of ingredients needed for that dish.\\n\"\n",
+    "        \"- the cuisine or cultural origin of the food\"\n",
+    "    )\n",
+    "])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "For the planner, we chain the prompt to the LLM and use `with_structured_output()` to format the output with the `Dishes` class:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "Dishes(sections=[Dish(name='Banana Smoothie', ingredients=['bananas', 'milk', 'yogurt', 'honey', 'ice cubes'], location='American'), Dish(name='Carrot Cake', ingredients=['carrots', 'flour', 'sugar', 'eggs', 'baking powder', 'cinnamon', 'vegetable oil', 'cream cheese', 'vanilla extract'], location='American')])"
+      ]
+     },
+     "execution_count": 8,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# use LCEL to pipe the prompt to an LLM with a structured output of Dishes\n",
+    "planner_pipe = dish_prompt | llm.with_structured_output(Dishes)\n",
+    "\n",
+    "# invoke the planner_pipe with example meals\n",
+    "planner_pipe.invoke({ \"meals\" : [\"banana smoothie\", \"carrot cake\"]})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This creates a processing pipeline where the prompt guides the LLM's reasoning, and `with_structured_output(Dishes)` ensures the response automatically conforms to our defined Pydantic schema structure.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## State (Orchestration)\n",
+    "\n",
+    "In LangGraph, **state** is the shared memory that flows through your workflow. It captures everything the agents or nodes need to know, modify, or pass along to the next step.\n",
+    "\n",
+    "Think of it as the **context backpack** carried from node to node.\n",
+    "\n",
+    "Unlike a traditional chain where only input and output are passed along, LangGraph gives each node access to a structured `state` dictionary, which can hold:\n",
+    "\n",
+    "- The original user input or goal.\n",
+    "- Intermediate results (for example, parsed sections, completed plans).\n",
+    "- Final summaries or evaluations.\n",
+    "- Data for decision-making or routing (for example, risk level, retry count).\n",
+    "\n",
+    "### Why State Matters in Agentic Workflows\n",
+    "\n",
+    "Agentic systems often involve multiple steps, roles, and decision points. Having a shared, evolving state lets your agents:\n",
+    "\n",
+    "- Access relevant context from earlier steps.\n",
+    "- Modify or enrich the state as they work.\n",
+    "- Route logic dynamically based on conditions.\n",
+    "- Loop, retry, or reflect based on what’s in the state.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class State(TypedDict):\n",
+    "    meals: str  # The user's input listing the meals to prepare\n",
+    "    sections: List[Dish] # One section per meal/dish with ingredients\n",
+    "    completed_menu: Annotated[List[str], operator.add]  # Worker written dish guide chunks\n",
+    "    final_meal_guide: str  # Fully compiled, readable menu"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "- `meals` is the initial input from the user\n",
+    "- `sections` will be the structured list of each dish created by the orchestrator\n",
+    "- `completed_menu` will be the output from each worker (meal specialist), with `operator.add` automatically aggregating results from all parallel workers\n",
+    "- `final_meal_guide` will be the final aggregation of all worker outputs into a complete meal planning guide\n",
+    "\n",
+    "Let's test the planner LLM before we create a LangGraph node. We initialize a dummy state with all fields blank except the meals key, then invoke the planner to see how it structures the user input into organized dish sections.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# create a dummy state to test our worker nodes\n",
+    "dummy_state: State = {\n",
+    "    \"meals\": \"Spaghetti Bolognese and Chicken Stir Fry\",\n",
+    "    \"sections\": [],\n",
+    "    \"completed_menu\": [],\n",
+    "    \"final_meal_guide\": \"\"\n",
+    "}\n",
+    "\n",
+    "report_sections = planner_pipe.invoke({\"meals\": dummy_state['meals']})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can print out the output of the LLM to see its structure. The result is a `Dishes` object containing a `sections` attribute, which is essentially a list of `Dish` objects with `name`, `ingredients`, and `location` attributes filled out for each dish (Italian and Chinese food respectively). We can iterate through and print them out:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Dish 1\n",
+      "\n",
+      "Item Name: Spaghetti Bolognese\n",
+      "Location/Cuisine: Italian\n",
+      "Ingredients: spaghetti, ground beef, onion, garlic, carrot, celery, canned tomatoes, olive oil, basil, oregano, salt, pepper.\n",
+      "Dish 2\n",
+      "\n",
+      "Item Name: Chicken Stir Fry\n",
+      "Location/Cuisine: Chinese\n",
+      "Ingredients: chicken breast, bell peppers, broccoli, carrot, soy sauce, ginger, garlic, olive oil, rice, sesame seeds.\n"
+     ]
+    }
+   ],
+   "source": [
+    "for i, section in enumerate(report_sections.sections):\n",
+    "    print(f\"Dish {i+1}\\n\")\n",
+    "    # add each dish to our dummy state\n",
+    "    dummy_state[\"sections\"].append(section)\n",
+    "    print(f\"Item Name: {section.name}\")\n",
+    "    print(f\"Location/Cuisine: {section.location}\")\n",
+    "    print(f\"Ingredients: {\", \".join(section.ingredients)}.\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Orchestrator Node\n",
+    "\n",
+    "The **orchestrator** is responsible for high-level planning and acts as the central coordinator in the LangGraph workflow. It takes a user's input and produces structured subtasks for other nodes to handle.\n",
+    "\n",
+    "In our workflow, the orchestrator:\n",
+    "\n",
+    "- Takes the raw input (for example, `\"Spaghetti Bolognese and Chicken Stir Fry\"`).\n",
+    "- Uses an LLM to break it down into structured `Dish` objects.\n",
+    "- Returns the result as a dict with the field `sections` for worker nodes to process.\n",
+    "\n",
+    "This enables **fan-out parallelism**, where multiple workers can now act independently.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def orchestrator(state: State):\n",
+    "    \"\"\"Orchestrator that generates a structured dish list from the given meals.\"\"\"\n",
+    "\n",
+    "    # use the planner_pipe LLM to break the user's meal list into structured dish sections\n",
+    "    dish_descriptions = planner_pipe.invoke({\"meals\": state[\"meals\"]})\n",
+    "\n",
+    "    # return the list of dish sections to be passed to worker nodes\n",
+    "    return {\"sections\": dish_descriptions.sections}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Worker Nodes\n",
+    "\n",
+    "Each **worker node** processes a single unit of work, typically one item from `state[\"sections\"]`.\n",
+    "\n",
+    "In this case, each worker will be a chef. The prompt template's system message specifies the input using the outputs from the orchestrator's schema. For example, a worker will:\n",
+    "\n",
+    "- Read one `Dish` object (for example, `\"Spaghetti Bolognese\"`).\n",
+    "- Use an LLM to generate a detailed recipe or instructions.\n",
+    "- Append the result to `state[\"completed_menu\"]`.\n",
+    "\n",
+    "Workers are designed to be **isolated** so they only see a slice of the state and return an output.\n",
+    "\n",
+    "We'll first create the prompt to get a guide for each dish from a professional chef:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "chef_prompt = ChatPromptTemplate.from_messages([\n",
+    "    (\n",
+    "        \"system\",\n",
+    "        \"You are a world-class chef from {location}.\\n\\n\"\n",
+    "        \"Please introduce yourself briefly and present a detailed walkthrough for preparing the dish: {name}.\\n\"\n",
+    "        \"Your response should include:\\n\"\n",
+    "        \"- Start with hello with your  name and culinary background\\n\"\n",
+    "        \"- A clear list of preparation steps\\n\"\n",
+    "        \"- A full explanation of the cooking process\\n\\n\"\n",
+    "        \"Use the following ingredients: {ingredients}.\"\n",
+    "    )\n",
+    "])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We then chain the prompt to the LLM, creating a `chef_llm`:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "chef_pipe = chef_prompt | llm"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The `WorkerState` defines the shape of the state that each **individual chef worker node** receives and returns.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class WorkerState(TypedDict):\n",
+    "    section: Dish\n",
+    "    completed_menu: Annotated[list, operator.add] # list with addition operators between elements"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The `assign_workers` function extracts each `Dish` object from the `sections` key and passes it to the worker node `chef_worker` that we have not defined yet. It does this by first extracting each section `s` from the `sections` value in the state variable. Then the `Send()` function passes `s` to the `chef_worker` node via the `section` key.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def assign_workers(state: State):\n",
+    "    \"\"\"Assign a worker to each section in the plan\"\"\"\n",
+    "\n",
+    "    # Kick off section writing in parallel via Send() API\n",
+    "    return [Send(\"chef_worker\", {\"section\": s}) for s in state[\"sections\"]]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next, we wrap the `chef_llm` as a worker node called `chef_worker`. Each worker is responsible for taking one dish section, provided through the `assign_workers` via `WorkerState`, and generating a detailed cooking plan for that meal.\n",
+    "\n",
+    "The inputs are passed via the worker state through the `section` variable that is of type `Dish`, which the `assign_workers` node extracts from the orchestrator node and passes to the LLM.\n",
+    "\n",
+    "The outputs are saved to `completed_menu`. Since state and worker share this value, the main State is automatically updated.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def chef_worker(state: WorkerState):\n",
+    "    \"\"\"Worker node that generates the cooking instructions for one meal section.\"\"\"\n",
+    "\n",
+    "    # Use the language model to generate a meal preparation plan\n",
+    "    # The model receives the dish name, location, and ingredients from the current section\n",
+    "    meal_plan = chef_pipe.invoke({\n",
+    "        \"name\": state[\"section\"].name,\n",
+    "        \"location\": state[\"section\"].location,\n",
+    "        \"ingredients\": state[\"section\"].ingredients\n",
+    "    })\n",
+    "\n",
+    "    # Return the generated meal plan wrapped in a list under completed_sections\n",
+    "    # This will be merged into the main state using operator.add in LangGraph\n",
+    "    return {\"completed_menu\": [meal_plan.content]}\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can replicate what's happening with a 'for' loop, iterating through the dummy worker state sections and passing each section to the chef LLM, then appending the results to `completed_menu`:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "dummy_dishes: List[Dish] = dummy_state[\"sections\"]\n",
+    "\n",
+    "# simulate LangGraph's fan-out and merging behavior\n",
+    "for section in dummy_dishes:\n",
+    "    # construct individual WorkerState\n",
+    "    worker_state: WorkerState = {\n",
+    "        \"section\": section,\n",
+    "        \"recipe\": []  # LangGraph merges this later\n",
+    "    }\n",
+    "\n",
+    "    # call the worker logic directly\n",
+    "    result = chef_worker(worker_state)\n",
+    "\n",
+    "    # merge the result into combined menu (LangGraph would do this with operator.add)\n",
+    "    dummy_state[\"completed_menu\"] += result[\"completed_menu\"]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "To get the final output, we simply concatenate the elements from `completed_menu` and print out the first 1000 characters:\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Ciao! My name is Giovanni, and I am an Italian chef with over 20 years of experience in traditional Italian cuisine. I have dedicated my life to perfecting classic recipes, and today I am excited to share with you my recipe for a delicious Spaghetti Bolognese. This dish is a true comfort food, packed with rich flavors and perfect for any occasion. Let’s get cooking!\n",
+      "\n",
+      "### Ingredients:\n",
+      "- 400g spaghetti\n",
+      "- 500g ground beef\n",
+      "- 1 large onion, finely chopped\n",
+      "- 2 cloves of garlic, minced\n",
+      "- 1 medium carrot, finely diced\n",
+      "- 1 stalk of celery, finely diced\n",
+      "- 400g canned tomatoes (whole or crushed)\n",
+      "- 3 tablespoons olive oil\n",
+      "- 1 teaspoon dried basil\n",
+      "- 1 teaspoon dried oregano\n",
+      "- Salt and pepper to taste\n",
+      "- Grated Parmesan cheese (optional, for serving)\n",
+      "\n",
+      "### Preparation Steps:\n",
+      "1. **Chop the Vegetables**: Finely chop the onion, carrot, and celery. Mince the garlic.\n",
+      "2. **Cook the Spaghetti**: Bring a large pot of salted water to a boil.\n",
+      "3. **Prepare the Bolognese Sauce**: In a large pan, heat olive oil ov\n"
+     ]
+    }
+   ],
+   "source": [
+    "completed_menu_sections = \"\\n\".join(dummy_state[\"completed_menu\"])\n",
+    "print(completed_menu_sections[:1000])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can convert the process above to a **synthesizer** node in LangGraph. The synthesizer node takes responses from all worker nodes and aggregates them into a final workflow output.\n",
+    "\n",
+    "The output will populate the `final_meal_guide` key:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def synthesizer(state: State):\n",
+    "    \"\"\"Synthesize full report from sections\"\"\"\n",
+    "\n",
+    "    # list of completed sections\n",
+    "    completed_sections = state[\"completed_menu\"]\n",
+    "\n",
+    "    # format completed section to str to use as context for final sections\n",
+    "    completed_menu = \"\\n\\n---\\n\\n\".join(completed_sections)\n",
+    "\n",
+    "    return {\"final_meal_guide\": completed_menu}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Building the Workflow (Orchestration)\n",
+    "\n",
+    "To build an agentic workflow in LangGraph, we use a `StateGraph`, a flexible graph structure that coordinates how nodes process and update shared state.\n",
+    "\n",
+    "Each node in the graph represents a **modular computation step**, such as planning, generating, evaluating, or synthesizing. The `StateGraph` defines how those nodes are connected and how data (state) flows between them. In a `StateGraph`, the input state travels through the workflow getting updated at each state, this is why the naming convention of the state remains consistent throughout the workflow.\n",
+    "\n",
+    "### Steps:\n",
+    "\n",
+    "1. **Initialize the graph** with a `State` schema that defines what information will persist and evolve across the workflow.\n",
+    "2. **Add nodes** using `.add_node(name, function)`, where each node operates on a portion of the state.\n",
+    "    - `orchestrator`, `chef_worker`, and `synthesizer`\n",
+    "4. **Connect the nodes** using:\n",
+    "   - `.add_edge(from_node, to_node)` for simple sequential steps\n",
+    "   - `.add_conditional_edges(...)` for dynamic routing or parallel fan-out\n",
+    "5. **Compile the graph** to finalize structure and validation.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<langgraph.graph.state.StateGraph at 0x7641e4602180>"
+      ]
+     },
+     "execution_count": 21,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# instantiate the builder\n",
+    "orchestrator_worker_builder = StateGraph(State)\n",
+    "\n",
+    "# add the nodes\n",
+    "orchestrator_worker_builder.add_node(\"orchestrator\", orchestrator)\n",
+    "orchestrator_worker_builder.add_node(\"chef_worker\", chef_worker)\n",
+    "orchestrator_worker_builder.add_node(\"synthesizer\", synthesizer)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Next, we add a conditional edge from the `orchestrator` node to `chef_worker`, which will create a variable number of nodes from the `assign_workers` function. `orchestrator` is the source node, `assign_workers` is the special routing function we created, and `chef_worker` is the target worker node:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<langgraph.graph.state.StateGraph at 0x7641e4602180>"
+      ]
+     },
+     "execution_count": 22,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "orchestrator_worker_builder.add_conditional_edges(\n",
+    "    \"orchestrator\", assign_workers, [\"chef_worker\"] # source node, routing function, list of allowed targets\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Finally, we define the entry point by connecting `START` to the orchestrator node, which will **begin** the meal planning process when the workflow is invoked. We also connect all worker outputs to the synthesizer node and then connect the synthesizer to the `END` node to **complete** the workflow:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<langgraph.graph.state.StateGraph at 0x7641e4602180>"
+      ]
+     },
+     "execution_count": 23,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# add the edges, connections between nodes\n",
+    "orchestrator_worker_builder.add_edge(START, \"orchestrator\")\n",
+    "orchestrator_worker_builder.add_edge(\"chef_worker\", \"synthesizer\")\n",
+    "orchestrator_worker_builder.add_edge(\"synthesizer\", END)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We compile the workflow builder into an executable graph that can process our meal planning requests:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# compile the builder to get a complete workflow executable\n",
+    "orchestrator_worker = orchestrator_worker_builder.compile()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Visualization\n",
+    "\n",
+    "LangGraph provides built-in support for visualizing workflows using [**Mermaid**](https://docs.mermaidchart.com/mermaid/intro), a lightweight diagramming syntax.\n",
+    "\n",
+    "The Mermaid chart helps you:\n",
+    "\n",
+    "- See how nodes (for example, `orchestrator`, `chef_worker`, `synthesizer`) are connected. \n",
+    "- Identify loops, fan-outs, or conditional flows.\n",
+    "- Understand how state moves through the workflow.\n",
+    "\n",
+    "This is especially useful for debugging, communicating workflow logic, or validating the structure of complex agentic systems before running them.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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",
+      "text/plain": [
+       "<IPython.core.display.Image object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# display the orchestrator workflow using mermaid chart\n",
+    "display(Image(orchestrator_worker.get_graph().draw_mermaid_png()))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Testing (Orchestration)\n",
+    "\n",
+    "Finally, we'll test the workflow by invoking it with a sample meal request to see the end-to-end meal planning process in action:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# invoke the workflow with a string of meals in a dict\n",
+    "state = orchestrator_worker.invoke({\"meals\": \"Steak and eggs, tacos, and chili\"})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can access the complete meal planning guide that contains all the detailed cooking instructions from our specialized chefs:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "('Hello! My name is Chef Alex, and I am an American chef with over a decade of '\n",
+      " \"experience in the culinary world. I've had the privilege of working in \"\n",
+      " 'various esteemed restaurants, focusing on classic American cuisine, and I '\n",
+      " 'absolutely love sharing my passion for food with others. Today, I’ll guide '\n",
+      " 'you through the delightful process of preparing a classic dish: Steak and '\n",
+      " 'Eggs.\\n'\n",
+      " '\\n'\n",
+      " '### Ingredients:\\n'\n",
+      " '- 1 steak (your choice of cut, such as ribeye, sirloin, or filet mignon)\\n'\n",
+      " '- 2 large eggs\\n'\n",
+      " '- Salt (to taste)\\n'\n",
+      " '- Pepper (to taste)\\n'\n",
+      " '- 2 tablespoons of butter\\n'\n",
+      " '\\n'\n",
+      " '### Preparation Steps:\\n'\n",
+      " '\\n'\n",
+      " '1. **Choose Your Steak:** Select your preferred cut of steak. Ribeye is rich '\n",
+      " 'and flavorful, while filet mignon is tender and lean.\\n'\n",
+      " '   \\n'\n",
+      " '2. **Bring to Room Temperature:** Remove the steak from the refrigerator and '\n",
+      " 'let it sit at room temperature for about 30 minutes before cooking. This '\n",
+      " 'helps it cook evenly.\\n'\n",
+      " '\\n'\n",
+      " '3. **Season the Steak:** Generously season both sides of the steak with salt '\n",
+      " 'and pepper.\\n'\n",
+      " '\\n'\n",
+      " '4. **Prepare the Eggs:** Crack the eggs into a bowl and season lightly with '\n",
+      " 'salt and pepper.\\n'\n",
+      " '\\n'\n",
+      " '5. **Preheat the Pan:** Heat a cast-iron skillet or non-stick pan over '\n",
+      " 'medium-high heat. Allow it to get hot before adding any ingredients.\\n'\n",
+      " '\\n'\n",
+      " '6. **Cook the Steak:** Add 1 tablespoon of butter to the hot pan. Once '\n",
+      " 'melted and bubbling, carefully place the steak in the pan.\\n'\n",
+      " '\\n'\n",
+      " '7. **Sear the Steak:** Cook the steak for about 4-5 minutes on one side '\n",
+      " 'without moving it, allowing it to develop a nice crust. \\n'\n",
+      " '\\n'\n",
+      " '8. **Flip the Steak:** After 4-5 minutes, flip the steak using tongs and add '\n",
+      " 'another tablespoon of butter to the pan. Cook for an additional 3-5 minutes '\n",
+      " 'for medium-rare, adjusting the time based on your desired doneness (use a '\n",
+      " 'meat thermometer: 130°F for medium-rare, 140°F for medium).\\n'\n",
+      " '\\n'\n",
+      " '9. **Rest the Steak:** Once done, remove the steak from the pan and let it '\n",
+      " 'rest on a cutting board for about 5 minutes. This allows the juices to '\n",
+      " 'redistribute.\\n'\n",
+      " '\\n'\n",
+      " '10. **Cook the Eggs:** In the same pan, with the remaining butter and steak '\n",
+      " 'drippings')\n"
+     ]
+    }
+   ],
+   "source": [
+    "# print the first 2000 characters of our final_meal_guide\n",
+    "pprint(state[\"final_meal_guide\"][:2000])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Reflection Pattern\n",
+    "\n",
+    "The Reflection Pattern is where an AI agent **iteratively** evaluates and improves its own outputs through self-assessment and feedback loops, similar to reflective agents in cognitive science. Rather than providing a single recommendation, the system creates an initial proposal, critically evaluates it against established criteria, and then refines the output based on that evaluation. This cycle continues **until the system achieves an optimal solution** that meets predefined quality standards.\n",
+    "\n",
+    "In this section, we'll build an intelligent investment advisory system that iteratively refines portfolio recommendations through continuous evaluation and feedback loops. The system combines aggressive growth strategies with conservative risk assessment to find the optimal balance for each investor's profile. The reflection pattern enables the system to self-correct and adapt its recommendations, ensuring each portfolio suggestion is thoroughly vetted before presentation to the investor.\n",
+    "\n",
+    "<img src=\"https://cf-courses-data.s3.us.cloud-object-storage.appdomain.cloud/9kH761sRFhuVPWzBUZhgkA/reflection.png\" width=\"100%\" alt=\"reflection\">\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## State (Reflection)\n",
+    "\n",
+    "Similar to the previous workflow, we'll also be using a state to track variables and values across this workflow. The following `State` dictionary represents the evolving context in an **Investment Advice Evaluator-Optimizer workflow**, tracking the user's investment profile, their investment plan, feedback from the evaluator, the user's safety (or risk) profile, the target safety profile, and a counter `n` for iterations.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 28,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "grades = Literal[\n",
+    "    \"ultra-conservative\", \n",
+    "    \"conservative\", \n",
+    "    \"moderate\", \n",
+    "    \"aggressive\", \n",
+    "    \"high risk\"\n",
+    "]\n",
+    "\n",
+    "class State(TypedDict):\n",
+    "    investment_plan: str\n",
+    "    investor_profile: str\n",
+    "    target_grade: grades\n",
+    "    feedback: str\n",
+    "    grade: grades\n",
+    "    n: int = 0"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "- `investment_plan`: Our generated plan that will be evaluated and revised if need be\n",
+    "- `investor_profile`: The user inputted profile that we'll use as a reference for the plan\n",
+    "- `target_grade`: A generated ideal risk tolerance grade based on the investor profile\n",
+    "- `feedback`: Evaluator feedback for the investment plan\n",
+    "- `grade`: Evaluated grade of the investment plan\n",
+    "- `n`: Number of evaluation iterations\n",
+    "\n",
+    "**Note:** Both grade fields are `Literal` meaning they can only take a value within the defined list.\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Setup Node\n",
+    "\n",
+    "Before building our Generator and Evaluator nodes, let's create a node that determines a fitting `target_grade` based on the investor profile. This value will remain **static** throughout the evaluation workflow and exists to push the generated output towards a general direction.\n",
+    "\n",
+    "We'll start by creating the prompt and the pipe to get the `target_grade`:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "grade_prompt = ChatPromptTemplate.from_messages([\n",
+    "    (\"system\",\n",
+    "     \"You are an investment advisor. Given the investor’s profile and their proposed plan,\"\n",
+    "     \"choose exactly one risk classification from: ultra-conservative, conservative, moderate, aggressive, high risk.\"\n",
+    "     \"Return ONLY the grade.\"\n",
+    "    ),\n",
+    "    (\"user\",\n",
+    "     \"Investor profile:\\n\\n{investor_profile}\\n\\n\"\n",
+    "    )\n",
+    "])\n",
+    "\n",
+    "grade_pipe = grade_prompt | llm"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Using the pipe we can create a function (node) to return the dict with the ideal `target_grade` key:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 30,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def determine_target_grade(state: State):\n",
+    "    \"\"\"Ask the LLM to pick the best-fitting target_grade.\"\"\"\n",
+    "    response = grade_pipe.invoke({\n",
+    "        \"investor_profile\": state[\"investor_profile\"]\n",
+    "    })\n",
+    "    \n",
+    "    # return as a plain dict so LangGraph can merge it into the state\n",
+    "    return {\"target_grade\": response.content.lower()}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Similar to the **orchestration workflow** we'll use a `dummy_state` to test our nodes. Let's initialize it with an example investor profile:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# initialize empty state except for the user inputted investor profile\n",
+    "dummy_state: State = {\n",
+    "    \"investment_plan\": \"\",\n",
+    "    \"investor_profile\": (\n",
+    "        \"Age: 29\\n\"\n",
+    "        \"Salary: $110,000\\n\"\n",
+    "        \"Assets: $40,000\\n\"\n",
+    "        \"Goal: Achieve financial independence by age 45\\n\"\n",
+    "        \"Risk tolerance: High\"\n",
+    "    ),\n",
+    "    \"target_grade\": \"\",\n",
+    "    \"feedback\": \"\",\n",
+    "    \"grade\": \"\",\n",
+    "    \"n\": 0\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Using the function we can determine a target grade and update the dummy state:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "{'feedback': '',\n",
+      " 'grade': '',\n",
+      " 'investment_plan': '',\n",
+      " 'investor_profile': 'Age: 29\\n'\n",
+      "                     'Salary: $110,000\\n'\n",
+      "                     'Assets: $40,000\\n'\n",
+      "                     'Goal: Achieve financial independence by age 45\\n'\n",
+      "                     'Risk tolerance: High',\n",
+      " 'n': 0,\n",
+      " 'target_grade': 'aggressive'}\n"
+     ]
+    }
+   ],
+   "source": [
+    "# get target grade\n",
+    "target_grade = determine_target_grade(dummy_state)\n",
+    "# update target grade with the returned dict\n",
+    "dummy_state.update(target_grade)\n",
+    "pprint(dummy_state)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Generator Node\n",
+    "\n",
+    "The first step in the Reflection workflow is the **generator node**, which produces an investment plan based on an investor's profile. The generator node is responsible for producing an investment strategy based on the investor profile. However, instead of generating a single plan, we design a **multi-phase generator** that evolves through feedback: starting bold, then refining based on evaluation.\n",
+    "\n",
+    "### Phase 1: Initial Generation\n",
+    "\n",
+    "In this initial generated strategy, we simulate the style of **Cathie Wood**, a well-known investor who takes a venture-style approach: favoring high-growth, high-risk opportunities over conservative, value-based strategies.\n",
+    "\n",
+    "To model this, we define:\n",
+    "\n",
+    "- A **system message** that describes Cathie Wood's investment philosophy: bold, tech-focused, and speculative.\n",
+    "- A **user message** that provides the specific investor profile.\n",
+    "- A **chained LLM**, `cathie_wood_pipe`, which combines both messages into a structured generation pipeline.\n",
+    "\n",
+    "This generator node serves as the **creative initiator** of the workflow, producing a candidate investment strategy that downstream nodes will later evaluate, critique, or refine:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 33,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# inital generation, no feedback, only based on profile\n",
+    "cathie_wood_prompt = ChatPromptTemplate.from_messages([\n",
+    "    (\"system\",\n",
+    "    \"\"\"You are a bold, innovation-driven investment advisor inspired by Cathie Wood.\n",
+    "\n",
+    "Your goal is to generate a high-conviction, forward-looking investment plan that embraces disruptive technologies,\n",
+    "emerging markets, and long-term growth potential. You are not afraid of short-term volatility as long as the upside is transformational.\n",
+    "\n",
+    "Create an investment strategy tailored to the investor profile below. Prioritize innovation and high-reward opportunities,\n",
+    "such as artificial intelligence, biotechnology, blockchain, or renewable energy.\n",
+    "\n",
+    "Respond with a concise investment plan in paragraph form.\n",
+    "\"\"\"\n",
+    "    ),\n",
+    "    (\"human\", \"Investor profile:\\n\\n{investor_profile}\")\n",
+    "])\n",
+    "\n",
+    "cathie_wood_pipe = cathie_wood_prompt | llm"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The second phase of the generator will require feedback from the evaluator, so let's format the evaluator's output for subsequent generation. After the initial plan is generated, an evaluator agent will analyze it and return a structured `Feedback` schema:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# evaluator output schema\n",
+    "class Feedback(BaseModel):\n",
+    "    grade: grades = Field(\n",
+    "        description=\"Classify the investment based on risk level, ranging from ultra-conservative to high risk.\"\n",
+    "    )\n",
+    "    feedback: str = Field(\n",
+    "        description=\"Provide reasoning for the risk classification assigned to the investment suggestion.\"\n",
+    "    )"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Phase 2: Adaptive Generation\n",
+    "\n",
+    "To improve the initial plan, we introduce a second generator — this time inspired by **Ray Dalio**, a more conservative and macroeconomically grounded investor. This part takes the `Feedback` (`grade` and `feedback`) from the **evaluator** along with the `investor_profile` from the state. This is done via the **human message** as the LLM is imagining a conversation where it has received previous feedback.\n",
+    "\n",
+    "To model this, we define:\n",
+    "\n",
+    "- A **system message** that describes Ray Dalio's investment strategy: conservative.\n",
+    "- A **human message** that provides the specific investor profile and the feedback.\n",
+    "- A **chained LLM**, `ray_dalio_pipe`, which combines both messages into a structured generation pipeline.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 35,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "ray_dalio_prompt = ChatPromptTemplate.from_messages([\n",
+    "    (\"system\",\n",
+    "    \"\"\"You are an investment advisor inspired by Ray Dalio's principles but with adaptive strategy generation.\n",
+    "Your goal is to create varied, scenario-aware investment plans that respond dynamically to economic conditions,\n",
+    "feedback, and the investor's evolving needs. You adapt your recommendations based on previous evaluations.\n",
+    "\n",
+    "CORE PRINCIPLES:\n",
+    "- Environmental diversification across economic regimes (growth/inflation combinations)\n",
+    "- Risk parity weighting by volatility, not just dollar amounts\n",
+    "- Inflation-aware asset selection with real return focus\n",
+    "- Macroeconomic scenario planning and regime identification\n",
+    "\n",
+    "ADAPTATION RULES based on feedback:\n",
+    "- If deemed \"too conservative\" → Increase growth equity allocation, add emerging markets, consider alternatives\n",
+    "- If deemed \"too aggressive\" → Add defensive assets, increase bond allocation, focus on dividend stocks\n",
+    "- If \"lacks inflation protection\" → Emphasize TIPS, commodities, REITs, international exposure\n",
+    "- If \"too complex\" → Simplify to core ETF strategy with clear rationale\n",
+    "- If \"insufficient diversification\" → Add geographic, sector, or alternative asset exposure\n",
+    "\n",
+    "ECONOMIC SCENARIO ADJUSTMENTS:\n",
+    "- Rising inflation environment → Emphasize commodities, TIPS, real estate, reduce duration\n",
+    "- Stagflation concerns → Focus on energy, materials, international markets, inflation hedges\n",
+    "- Deflationary risks → Increase government bonds, high-quality corporate bonds, cash positions\n",
+    "- Growth acceleration → Favor technology, consumer discretionary, small-cap growth\n",
+    "- Economic uncertainty → Balance with \"All Weather\" approach using multiple asset classes\n",
+    "\n",
+    "TARGETING 15% RETURNS through:\n",
+    "- Strategic overweighting of growth assets during favorable conditions\n",
+    "- Tactical allocation adjustments based on economic regime\n",
+    "- Alternative investments (REITs, commodities, international) for diversification\n",
+    "- Leverage consideration for qualified investors\n",
+    "- Regular rebalancing to capture volatility\n",
+    "\n",
+    "Respond with a clear, actionable investment plan that reflects current economic conditions \n",
+    "and adapts to the specific feedback provided. Vary your approach significantly based on \n",
+    "the grade and feedback received.\n",
+    "\"\"\"\n",
+    "    ),\n",
+    "    (\"human\",\n",
+    "     \"\"\"Investor profile:\n",
+    "{investor_profile}\n",
+    "\n",
+    "Previous strategy grade: {grade}\n",
+    "\n",
+    "Evaluator feedback: {feedback}\n",
+    "\n",
+    "Based on this feedback, create a NEW investment strategy that addresses the concerns raised \n",
+    "while targeting 15% returns. Make significant adjustments from any previous approach.\n",
+    "\"\"\")\n",
+    "])\n",
+    "\n",
+    "ray_dalio_pipe = ray_dalio_prompt | llm"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Build the Generator Node\n",
+    "\n",
+    "The `investment_plan_generator` node serves as a dynamic strategy creator in our **Reflection workflow**. It adapts its behavior based on whether the system is generating an initial plan or refining a prior one based on feedback.\n",
+    "\n",
+    "This generator switches between two distinct investment personas:\n",
+    "\n",
+    "- **Cathie Wood–style (Initial Phase)**  \n",
+    "  If no prior feedback exists in the state, the generator uses `cathie_wood_pipe`, producing a high-growth, innovation-driven strategy that emphasizes disruptive technologies and bold returns.\n",
+    "\n",
+    "- **Ray Dalio–style (Refinement Phase)**  \n",
+    "  If feedback from an evaluator is already present (`state[\"feedback\"]`), the generator invokes `ray_dalio_pipe` to adapt the plan accordingly. It uses:\n",
+    "  - The original investor profile\n",
+    "  - The evaluator's risk grade (for example, \"high risk\")\n",
+    "  - Specific feedback (for example, \"not diversified\", \"too aggressive\")\n",
+    "\n",
+    "This allows the workflow to **evolve investment strategies over time**, adjusting recommendations in response to critique — a key agentic reflection pattern:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 36,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def investment_plan_generator(state: State) -> dict:\n",
+    "    \"\"\"Prompts an LLM to generate or improve an investment plan based on the current state.\"\"\"\n",
+    "\n",
+    "    if state.get(\"feedback\"):\n",
+    "        # use Ray Dalio–style generator when feedback is available\n",
+    "        response = ray_dalio_pipe.invoke({\n",
+    "            \"investor_profile\": state[\"investor_profile\"],\n",
+    "            \"grade\": state[\"grade\"],\n",
+    "            \"feedback\": state[\"feedback\"]\n",
+    "        })\n",
+    "    else:\n",
+    "        # use Cathie Wood–style generator for initial plan\n",
+    "        response = cathie_wood_pipe.invoke({\n",
+    "            \"investor_profile\": state[\"investor_profile\"]\n",
+    "        })\n",
+    "\n",
+    "    return {\"investment_plan\": response.content}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we can test the generator node with our `dummy_state`. Currently it only has the `investment_profile` and `target_grade` fields filled and the `feedback` field empty so it will go with the Cathie Wood-style investment plan generator. We can update the `dummy_state` variable with the new plan and print it out:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 37,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "{'feedback': '',\n",
+      " 'grade': '',\n",
+      " 'investment_plan': 'Given your profile, I recommend a bold investment '\n",
+      "                    'strategy that capitalizes on transformative sectors '\n",
+      "                    'poised for explosive growth. Start by allocating 50% of '\n",
+      "                    'your assets ($20,000) into a diversified ETF focused on '\n",
+      "                    'disruptive technologies, such as ARK Innovation ETF '\n",
+      "                    '(ARKK), which includes companies in artificial '\n",
+      "                    'intelligence, genomics, and fintech. Next, invest 25% '\n",
+      "                    '($10,000) in biotechnology firms that are innovating in '\n",
+      "                    'gene editing and personalized medicine—consider '\n",
+      "                    'individual stocks like CRISPR Therapeutics (CRSP) or '\n",
+      "                    'Illumina (ILMN). Allocate 15% ($6,000) to renewable '\n",
+      "                    'energy companies, such as NextEra Energy (NEE) or solar '\n",
+      "                    'technology firms, which benefit from the global shift '\n",
+      "                    'toward sustainability. Finally, reserve 10% ($4,000) for '\n",
+      "                    'blockchain-related investments, including '\n",
+      "                    'cryptocurrencies like Ethereum or blockchain technology '\n",
+      "                    'firms with potential for high returns. Regularly '\n",
+      "                    'rebalance your portfolio to maintain these allocations, '\n",
+      "                    'and consider dollar-cost averaging into these positions '\n",
+      "                    'to mitigate short-term volatility. This strategy aims to '\n",
+      "                    'harness high-reward opportunities and leverage your '\n",
+      "                    'high-risk tolerance to achieve financial independence by '\n",
+      "                    'age 45.',\n",
+      " 'investor_profile': 'Age: 29\\n'\n",
+      "                     'Salary: $110,000\\n'\n",
+      "                     'Assets: $40,000\\n'\n",
+      "                     'Goal: Achieve financial independence by age 45\\n'\n",
+      "                     'Risk tolerance: High',\n",
+      " 'n': 0,\n",
+      " 'target_grade': 'aggressive'}\n"
+     ]
+    }
+   ],
+   "source": [
+    "# get the investment plan\n",
+    "initial_investment_plan = investment_plan_generator(dummy_state)\n",
+    "# update the dummy state with generated plan\n",
+    "dummy_state.update(initial_investment_plan)\n",
+    "pprint(dummy_state)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Evaluator Node\n",
+    "\n",
+    "The Evaluator Node is responsible for critically assessing the investment strategy generated by the system. It does so through the lens of **Warren Buffett's value-investing philosophy**, which emphasizes:\n",
+    "\n",
+    "- Capital preservation  \n",
+    "- Sound business fundamentals  \n",
+    "- Long-term stability  \n",
+    "- Caution toward speculative or high-volatility assets\n",
+    "\n",
+    "This makes Buffett's conservative worldview the perfect counterbalance to the aggressive strategies generated by the Cathie Wood–style generator.\n",
+    "\n",
+    "### What the Evaluator Does\n",
+    "\n",
+    "The evaluator reviews the generated `investment_plan` in the context of the `investor_profile` and a predefined `target_grade`. It then:\n",
+    "\n",
+    "- Assigns a risk **grade** (One of the predefined `Literal` values).\n",
+    "- Provides a concise **feedback explanation** justifying the grade.\n",
+    "\n",
+    "The evaluation schema `Feedback` was defined earlier, it'll be used to defined the structured output for our `evaluator_prompt`:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 38,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Warren Buffet style evaluation prompt\n",
+    "evaluator_prompt = ChatPromptTemplate.from_messages([\n",
+    "    (\"system\", \n",
+    "    \"\"\"You are an investment risk evaluator inspired by Warren Buffett's value investing philosophy.\n",
+    "\n",
+    "Your task is to assess whether a proposed investment strategy aligns with conservative, value-driven principles \n",
+    "that emphasize capital preservation, long-term stability, and sound business fundamentals. You should be \n",
+    "skeptical of speculative investments, high-volatility assets, and short-term market trends.\n",
+    "\n",
+    "RISK CLASSIFICATION LEVELS:\n",
+    "- ultra-conservative: Extremely safe, minimal risk of loss\n",
+    "- conservative: Low risk, prioritizes capital preservation  \n",
+    "- moderate: Balanced approach with acceptable risk-reward ratio\n",
+    "- aggressive: Higher risk for potentially greater returns\n",
+    "- high risk: Speculative investments with significant loss potential\n",
+    "\n",
+    "EVALUATION CRITERIA:\n",
+    "- Business clarity: Is the investment easily understandable with transparent cash flows?\n",
+    "- Margin of safety: Does the investment price provide protection against downside risk?\n",
+    "- Capital preservation: Will this strategy protect wealth over the long term?\n",
+    "- Investor alignment: Does this match a conservative investor's risk tolerance and goals?\n",
+    "- Quality fundamentals: Are the underlying assets financially sound with competitive advantages?\n",
+    "\n",
+    "Return your assessment in the following  format:\n",
+    "{{\n",
+    "  \"grade\": \"<investment risk level>\",\n",
+    "  \"feedback\": \"<concise explanation of the assigned risk level and key reasoning>\"\n",
+    "}}\n",
+    "\"\"\"\n",
+    "    ),\n",
+    "    (\"human\", \n",
+    "     \"Evaluate this investment plan:\\n\\n{investment_plan}\\n\\nFor this investor profile:\\n\\n{investor_profile}\\n\\nAnd provide feedback that matches this target risk level: {target_grade}\")\n",
+    "])\n",
+    "\n",
+    "# create the pipe with the structured output that outputs a Feedback object\n",
+    "buffett_evaluator_pipe = evaluator_prompt | llm.with_structured_output(Feedback)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Build the Generator Node\n",
+    "\n",
+    "The `evaluate_plan` node is responsible for reviewing the generated investment strategy and assigning it a risk grade and explanation. This is done using our **Buffett-inspired evaluator** pipeline, which applies value-investing principles to judge whether the proposed plan matches the investor's target risk profile.\n",
+    "\n",
+    "This node:\n",
+    "\n",
+    "- Takes the current `investment_plan` from the state\n",
+    "- Assesses it with regards to the `investor_profile` and your ideal `target_grade`\n",
+    "- Uses the `buffett_evaluator` to generate:\n",
+    "  - A structured **grade** (for example, `\"moderate\"`, `\"aggressive\"`)\n",
+    "  - A **feedback** string justifying the risk classification\n",
+    "- Increments a counter `n` to keep track of how many iterations (reflection loops) have occurred\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 39,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def evaluate_plan(state: State):\n",
+    "    \"\"\"LLM evaluates the investment plan\"\"\"\n",
+    "\n",
+    "    # add one to the current count\n",
+    "    current_count = state.get('n', 0) + 1\n",
+    "\n",
+    "    # get the evaluation result from the evaluator pipe\n",
+    "    evaluation_result = buffett_evaluator_pipe.invoke({\n",
+    "        \"investment_plan\": state[\"investment_plan\"],\n",
+    "        \"investor_profile\": state[\"investor_profile\"],\n",
+    "        \"target_grade\": state[\"target_grade\"]\n",
+    "    })\n",
+    "\n",
+    "    # return the grade and feedback in a dict\n",
+    "    return {\"grade\": evaluation_result.grade, \"feedback\": evaluation_result.feedback, \"n\": current_count}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we can test the evaluator node with our `dummy_state`. Pass the state into our `evaluate_plan` to evaluate the investment plan and update the state with the returned dictionary:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 40,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# get the feedback\n",
+    "evaluated_feedback = evaluate_plan(dummy_state)\n",
+    "# update the dummy state with the feedback\n",
+    "dummy_state.update(evaluated_feedback)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we can see the `feedback` and `grade` of our investment plan:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 41,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Grade: high risk\n",
+      "Feedback: This investment strategy is classified as high risk due to its heavy emphasis on speculative sectors, such as disruptive technologies and individual biotechnology stocks. The focus on volatile assets like cryptocurrencies and emerging technologies increases the potential for significant losses, contradicting principles of capital preservation and long-term stability. While the investor has a high-risk tolerance, the lack of a margin of safety and reliance on market trends make this approach unsuitable for a conservative, value-driven investment philosophy.\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(f\"Grade: {dummy_state[\"grade\"]}\")\n",
+    "print(f\"Feedback: {dummy_state[\"feedback\"]}\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Routing Node\n",
+    "\n",
+    "The `route_investment` node acts as a **decision-making mechanism** in our LangGraph workflow. After a strategy is evaluated, this node determines whether to:\n",
+    "\n",
+    "- Accept the current investment plan and end the loop.\n",
+    "- Send it back to the generator for refinement.\n",
+    "- Stop the process entirely after too many failed attempts.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "### How It Works\n",
+    "\n",
+    "The router checks two key fields from the shared `state`:\n",
+    "\n",
+    "1. `grade`: Assigned by the evaluator\n",
+    "2. `target_grade`: The prefferred risk classification from the investor profile\n",
+    "\n",
+    "It also checks the **iteration count** `n`, which tracks how many times the strategy has been revised:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def route_investment(state: State, iteration_limit: int = 5):\n",
+    "    \"\"\"Route investment based on risk grade evaluation\"\"\"\n",
+    "    # get grades\n",
+    "    current_grade = state.get(\"grade\", \"MISSING\")\n",
+    "    target_grade = state.get(\"target_grade\", \"MISSING\")\n",
+    "    # check if grades match\n",
+    "    match = current_grade == target_grade\n",
+    "\n",
+    "    # print out the tracked values\n",
+    "    print(f\"=== ROUTING  ===\")\n",
+    "    print(f\"Current grade: '{current_grade}'\")\n",
+    "    print(f\"Target risk profile: '{target_grade}'\")\n",
+    "    print(f\"Match: {match}\")\n",
+    "    print(f\"Number of trials: {state['n']}\")\n",
+    "\n",
+    "    # routing logic\n",
+    "    if match: # grades match\n",
+    "        print(\"→ Routing to: Accepted\")\n",
+    "        return \"Accepted\"\n",
+    "    elif state['n'] > iteration_limit: # review iterations exceeds limit\n",
+    "        print(\"→ Too many iterations, stopping\")\n",
+    "        return \"Accepted\"\n",
+    "    else: # grades don't match\n",
+    "        print(\"→ Routing to: Rejected + Feedback\")\n",
+    "        return \"Rejected + Feedback\""
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Building the Workflow (Reflection)\n",
+    "\n",
+    "To enable iterative refinement of investment strategies, we construct a **Reflection Workflow** using `StateGraph`. This workflow mimics how a thoughtful advisor might revise and re-evaluate strategies over multiple rounds based on feedback.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "### Core Idea\n",
+    "\n",
+    "The reflection pattern involves a **loop** between generation and evaluation:\n",
+    "\n",
+    "1. Generate a strategy based on the investor profile and risk appetite\n",
+    "2. Evaluate the strategy using structured feedback\n",
+    "3. If the strategy doesn't match the target grade, revise and repeat\n",
+    "\n",
+    "This cycle allows the system to **improve** and **adapt** the investment plan through reflection — not just respond once.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "### Building\n",
+    "\n",
+    "1. **Add Core Nodes**\n",
+    "   - `determine_target_grade`: Determines the appropriate target risk level based on the investor profile.\n",
+    "   - `investment_plan_generator`: Generates an investment plan using an LLM in the style of Cathie Wood or Ray Dalio.\n",
+    "   - `evaluate_plan`: Evaluates the generated plan using a Buffett-inspired risk assessment model.\n",
+    "2. **Define the Workflow Edges**\n",
+    "   - Connect `START → determine_target_grade`\n",
+    "   - Connect `determine_target_grade → investment_plan_generator`\n",
+    "   - Connect `investment_plan_generator → evaluate_plan`\n",
+    "3. **Establish Core Flow**\n",
+    "   - The generator and evaluator form the backbone of the reflection loop.\n",
+    "   - This flow ensures that every strategy is generated and evaluated before further routing decisions are made.\n",
+    "4. Add a **conditional Routing Node** to:\n",
+    "   - Compare the evaluated grade to the target grade.\n",
+    "   - Decide whether to accept the strategy or route it back for refinement.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 43,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<langgraph.graph.state.StateGraph at 0x7641e4517470>"
+      ]
+     },
+     "execution_count": 43,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# initialize StateGraph with the given State schema\n",
+    "optimizer_builder = StateGraph(State)\n",
+    "\n",
+    "# add the setup, generator, and evaluator nodes\n",
+    "optimizer_builder.add_node(\"determine_target_grade\", determine_target_grade)\n",
+    "optimizer_builder.add_node(\"investment_plan_generator\", investment_plan_generator)\n",
+    "optimizer_builder.add_node(\"evaluate_plan\", evaluate_plan)\n",
+    "\n",
+    "# define the flow with edges\n",
+    "optimizer_builder.add_edge(START, \"determine_target_grade\")\n",
+    "optimizer_builder.add_edge(\"determine_target_grade\", \"investment_plan_generator\")\n",
+    "optimizer_builder.add_edge(\"investment_plan_generator\", \"evaluate_plan\")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Conditional Routing\n",
+    "\n",
+    "To enable iterative refinement, we complete the reflection loop by adding a **conditional edge** from the evaluator node. This edge dynamically routes the workflow based on the evaluation outcome. The conditional edge uses a `lambda` function to invoke the `route_investment` decision logic. This logic compares the evaluator's assigned risk grade against the target risk profile, and checks how many iterations have already occurred.\n",
+    "\n",
+    "Depending on the result:\n",
+    "\n",
+    "- If the plan is **Accepted** (as in, the grade matches the target), the workflow proceeds to `END`.\n",
+    "- If the plan is **Rejected + Feedback**, it loops back to the generator for refinement.\n",
+    "- If the maximum number of iterations (for example, 5) is reached, the loop exits gracefully with the last attempt.\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 44,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<langgraph.graph.state.StateGraph at 0x7641e4517470>"
+      ]
+     },
+     "execution_count": 44,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# add conditional edge for reflection\n",
+    "optimizer_builder.add_conditional_edges(\n",
+    "    \"evaluate_plan\",\n",
+    "    lambda state: route_investment(state),\n",
+    "    {\n",
+    "        \"Accepted\": END,\n",
+    "        \"Rejected + Feedback\": \"investment_plan_generator\",\n",
+    "    },\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Finally we'll compile our builder into a workflow that can take an investment profile and iteratively generate an investment plan for it:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 45,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# compile the workflow\n",
+    "optimizer_workflow = optimizer_builder.compile()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Visualization\n",
+    "\n",
+    "Again, we'll use LangGraph's built in Mermaid charts to visualize the graph:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 46,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "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",
+      "text/plain": [
+       "<IPython.core.display.Image object>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "# display the graph\n",
+    "display(Image(optimizer_workflow.get_graph().draw_mermaid_png()))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Testing (Reflection)\n",
+    "\n",
+    "Finally, we'll test the workflow by invoking it with an example investment profile to see the end-to-end investment plan generation process in action:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 47,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "=== ROUTING  ===\n",
+      "Current grade: 'high risk'\n",
+      "Target risk profile: 'aggressive'\n",
+      "Match: False\n",
+      "Number of trials: 1\n",
+      "→ Routing to: Rejected + Feedback\n",
+      "=== ROUTING  ===\n",
+      "Current grade: 'moderate'\n",
+      "Target risk profile: 'aggressive'\n",
+      "Match: False\n",
+      "Number of trials: 2\n",
+      "→ Routing to: Rejected + Feedback\n",
+      "=== ROUTING  ===\n",
+      "Current grade: 'high risk'\n",
+      "Target risk profile: 'aggressive'\n",
+      "Match: False\n",
+      "Number of trials: 3\n",
+      "→ Routing to: Rejected + Feedback\n",
+      "=== ROUTING  ===\n",
+      "Current grade: 'aggressive'\n",
+      "Target risk profile: 'aggressive'\n",
+      "Match: True\n",
+      "Number of trials: 4\n",
+      "→ Routing to: Accepted\n"
+     ]
+    }
+   ],
+   "source": [
+    "# invoke the workflow with an example investor profile\n",
+    "state = optimizer_workflow.invoke({\n",
+    "    \"investor_profile\": (\n",
+    "        \"Age: 29\\n\"\n",
+    "        \"Salary: $110,000\\n\"\n",
+    "        \"Assets: $40,000\\n\"\n",
+    "        \"Goal: Achieve financial independence by age 45\\n\"\n",
+    "        \"Risk tolerance: High\"\n",
+    "    )\n",
+    "})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can view the final returned state of the workflow below:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 48,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "🎯 Final Investment Plan Summary\n",
+      "========================================\n",
+      "\n",
+      "📌 Investor Profile:\n",
+      "Age: 29\n",
+      "Salary: $110,000\n",
+      "Assets: $40,000\n",
+      "Goal: Achieve financial independence by age 45\n",
+      "Risk tolerance: High\n",
+      "\n",
+      "📈 Target Risk Grade: aggressive\n",
+      "📊 Final Assigned Grade: aggressive\n",
+      "🔁 Iterations Taken: 4\n",
+      "\n",
+      "📝 Evaluator Feedback:\n",
+      "------------------------------\n",
+      "This investment strategy is classified as aggressive due to its high target return of 15% and substantial allocation to growth equities (30%), emerging markets (10%), and REITs (10%). While it includes some capital preservation elements through bonds and TIPS, the overall focus on high-growth assets and the potential for significant volatility in the equity markets indicate a higher risk profile. Additionally, the reliance on tactical adjustments and stop-loss orders reflects a willingness to engage with market fluctuations, aligning it with aggressive investment strategies rather than conservative principles.\n",
+      "\n",
+      "📃 Final Investment Plan:\n",
+      "------------------------------\n",
+      "**Revised Investment Strategy for High-Risk Tolerance Investor**\n",
+      "\n",
+      "**Objective:** Achieve financial independence by age 45 with a target return of 15% while addressing the concerns raised regarding capital preservation and margin of safety.\n",
+      "\n",
+      "### 1. Portfolio Overview:\n",
+      "- **Target Return:** 15%\n",
+      "- **Investment Horizon:** 16 years\n",
+      "- **Risk Tolerance:** High, but balanced with capital preservation considerations\n",
+      "- **Current Assets:** $40,000\n",
+      "- **Annual Contribution:** 15% of salary (~$16,500)\n",
+      "\n",
+      "### 2. Asset Allocation:\n",
+      "To balance high growth potential with capital preservation and reduced volatility, the new allocation will be structured as follows:\n",
+      "\n",
+      "**Equity (50% Total)**\n",
+      "- **Growth Equities (30%)**: Focus on established technology, consumer discretionary, and healthcare companies with strong fundamentals. Use ETFs like the **Vanguard Growth ETF (VUG)** or **Invesco QQQ Trust (QQQ)**.\n",
+      "- **Dividend Stocks (10%)**: Allocate to high-quality dividend payers that provide income and stability. Consider ETFs like **Vanguard Dividend Appreciation ETF (VIG)**.\n",
+      "- **Emerging Markets (10%)**: Maintain exposure for growth, but focus on diversified ETFs like the **iShares MSCI Emerging Markets ETF (EEM)** to mitigate single-country risk.\n",
+      "\n",
+      "**Bonds (30% Total)**\n",
+      "- **Government Bonds (15%)**: Invest in a mix of short- to intermediate-term government bonds for stability. Use ETFs like the **iShares 7-10 Year Treasury Bond ETF (IEF)**.\n",
+      "- **TIPS (10%)**: Incorporate Treasury Inflation-Protected Securities to guard against inflation. Consider **iShares TIPS Bond ETF (TIP)**.\n",
+      "- **High-Quality Corporate Bonds (5%)**: Add a small allocation to high-rated corporate bonds for yield. Use **iShares iBoxx $ Investment Grade Corporate Bond ETF (LQD)**.\n",
+      "\n",
+      "**Real Assets (20% Total)**\n",
+      "- **REITs (10%)**: Include real estate exposure for diversification and income. Use **Vanguard Real Estate ETF (VNQ)**.\n",
+      "- **Commodities (5%)**: Hedge against inflation with commodity exposure. Consider **Invesco DB Commodity Index Tracking Fund (DBC)**.\n",
+      "- **Cash or Cash Equivalents (5%)**: Maintain liquidity for market opportunities and for safety during downturns.\n",
+      "\n",
+      "### 3. Rebalancing Strategy:\n",
+      "- **Annual Rebalancing**: Review and rebalance the portfolio annually to maintain target allocations.\n",
+      "- **Tactical Adjustments**: Monitor economic indicators (inflation, growth rates) and adjust sector weights if necessary. For example, increase the bond allocation in case of rising inflation or economic uncertainty.\n",
+      "\n",
+      "### 4. Risk Management:\n",
+      "- **Stop-Loss Orders**: Implement stop-loss orders on volatile growth equities to limit potential losses.\n",
+      "- **Emergency Fund**: Maintain an emergency fund with 6-12 months of living expenses in a high-yield savings account to provide additional safety.\n",
+      "- **Regular Reviews**: Conduct bi-annual reviews of the portfolio and adjust based on market conditions and personal financial situations.\n",
+      "\n",
+      "### 5. Education and Continuous Learning:\n",
+      "- **Investment Knowledge**: Engage in continuous education about market dynamics, economic indicators, and investment strategies to make informed decisions.\n",
+      "\n",
+      "### 6. Conclusion:\n",
+      "This new investment strategy retains high-growth potential while integrating elements of capital preservation and risk management. With a diversified approach that includes equities, bonds, and real assets, this strategy aims to balance risk and return effectively, aligning with the goal of achieving financial independence by age 45. Regular evaluations and tactical adjustments will help navigate changing economic conditions while targeting the desired return.\n"
+     ]
+    }
+   ],
+   "source": [
+    "def pretty_print_final_state(state: dict):\n",
+    "    print(\"🎯 Final Investment Plan Summary\\n\" + \"=\"*40)\n",
+    "    print(f\"\\n📌 Investor Profile:\\n{state['investor_profile']}\")\n",
+    "    \n",
+    "    print(\"\\n📈 Target Risk Grade:\", state['target_grade'])\n",
+    "    print(\"📊 Final Assigned Grade:\", state['grade'])\n",
+    "    print(\"🔁 Iterations Taken:\", state['n'])\n",
+    "\n",
+    "    print(\"\\n📝 Evaluator Feedback:\\n\" + \"-\"*30)\n",
+    "    print(state['feedback'])\n",
+    "\n",
+    "    print(\"\\n📃 Final Investment Plan:\\n\" + \"-\"*30)\n",
+    "    print(state['investment_plan'])\n",
+    "\n",
+    "pretty_print_final_state(state)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Conclusion\n",
+    "\n",
+    "In this lab, we’ve explored how **LangGraph** empowers you to build dynamic, agentic AI workflows. \n",
+    "\n",
+    "Throughout, we learned and applied important concepts such as:\n",
+    "\n",
+    "1. **Orchestrator–Worker Pattern**  \n",
+    "   - High-level planning with an orchestrator node  \n",
+    "   - Parallel task execution by independent worker nodes  \n",
+    "   - Automatic state merging via `Annotated` fields\n",
+    "\n",
+    "2. **Reflection Pattern**  \n",
+    "   - Iterative generate–evaluate loops inspired by real investor personas  \n",
+    "   - Structured feedback using Pydantic output parsers  \n",
+    "   - Conditional routing to refine or accept results until they meet targets\n",
+    "\n",
+    "3. **State Management & Routing**  \n",
+    "   - A shared `State` schema carrying context across nodes  \n",
+    "   - Flexible fan-out and conditional edges (`Send`, `add_conditional_edges`)  \n",
+    "   - Loop control via iteration counters and routing logic\n",
+    "\n",
+    "4. **Visualization & Testing**  \n",
+    "   - Mermaid diagrams for graph structure inspection  \n",
+    "   - Manual simulations and pretty-print utilities for debugging and presentation\n",
+    "\n",
+    "---\n",
+    "\n",
+    "## Next Steps\n",
+    "\n",
+    "- **Check out [Watsonx Orchestrate](https://www.ibm.com/products/watsonx-orchestrate?utm_source=skills_network&utm_content=in_lab_content_link&utm_id=Lab-Agentic+Design+Patterns+in+LangGraph-v1_1752612018)**: AI Agents for business to automate and handle simple tasks using orchestration.\n",
+    "- **Extend the Patterns**: Try the optimizer (plan–evaluate) pattern or combine reflection with reinforcement learning.\n",
+    "- **Domain Adaptation**: Swap out the grocery-list or investment example for customer support, legal drafting, or robotic control.\n",
+    "- **Monitoring & Metrics**: Instrument your graph with logging, latency tracking, and success/failure metrics.\n",
+    "- **Error Handling & Robustness**: Add retry policies, fallback nodes, and alerting for production readiness.\n",
+    "\n",
+    "By mastering these design patterns—**orchestration**, **evaluation**, **reflection**, and **routing**—you can create truly **agentic systems** that plan, critique, adapt, and improve over time. \n",
+    "\n",
+    "#### Happy building!\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Authors\n",
+    "\n",
+    "[Joseph Santarcangelo](https://author.skills.network/instructors/joseph_santarcangelo) | Data Scientist @ IBM <br>\n",
+    "[Wojciech \"Victor\" Fulmyk](https://author.skills.network/instructors/wojciech_fulmyk) | Data Scientist @ IBM <br>\n",
+    "[Kunal Makwana](https://author.skills.network/instructors/kunal_makwana) | AI Software Developer @ IBM<br>\n",
+    "[Joshua Zhou](https://author.skills.network/instructors/joshua_zhou) | Data Scientist Intern @ IBM\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Change Log\n",
+    "\n",
+    "<details>\n",
+    "    <summary>Click here for the changelog</summary>\n",
+    "\n",
+    "|Date (YYYY-MM-DD)|Version|Changed By|Change Description|\n",
+    "|-|-|-|-|\n",
+    "|2025-06-25|0.1|Joseph|Initial version created|\n",
+    "|2025-07-11|1.0|Joshua|First completed draft|\n",
+    "|2025-07-22|1.1|Steve Ryan|ID review|\n",
+    "|2025-07-22|1.2|Leah Hanson|QA review|\n",
+    "\n",
+    "</details>\n",
+    "\n",
+    "---\n",
+    "\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Copyright © IBM Corporation. All rights reserved.\n"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.12.8"
+  },
+  "prev_pub_hash": "b77af27fa5f24ee7cc03d6b2bd8f8b824abd683df1d243d194cd42fdab910b93"
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
